@@ -44,12 +44,13 @@ def getLogs(fromBlock, toBlock):
 
 """
 This function is necessary as the log needs to be formatted in the way
-'contract.events.Birth().processLog(log)' processes it. Namely,
-the log must be converted from a Dictionary to an Attribute Dictionary.
+'contract.events.Birth().processLog(log)' processes it.
 
-Also, the hex numbers need to be converted from string to hexbytes for:
+Namely:
+1.) The log must be converted from a Dictionary to an Attribute Dictionary.
+2.) The hex numbers need to be converted from string to hexbytes for:
 blockHash, topics, transactionHash
-blockNumber, logIndex, and transactionIndex must be converted from
+3.) blockNumber, logIndex, and transactionIndex must be converted from
 hex string to integer
 """
 def convertLog(log):
@@ -75,17 +76,16 @@ def convertLog(log):
 Returns total births and the kitty with the most births from the starting block
 to ending block.
 Because Infura getLogs only allows for 10000 logs at a time, we have to call
-getLogs multiple times in intervals. Since the the runtime of this program is
-a bit long, the interval will be set to 100 just so I can see the updates.
+getLogs multiple times in intervals. I'll set the interval to 5000.
 
 Uses a Dictionary to keep track of the number of births of each matron, where
 the key is the matron's ID.
-Additionally, uses a Set to keep track of the birth of each kitty. For some reason,
-I'm encountering duplicate logs
+For some reason, I'm encountering duplicate logs, so I'm using a Set to keep
+track of the newborn kitties so I'm not counting repeats.
 """
 def solveKitty(start, fin):
     INTERVAL = 5000
-    totalBirths = mostBirths = 0
+    totalBirths = mostBirths = naturalBirths = 0
     kittyWithMostBirths = None # stores ID of kitty with most births
     matrons = {} # Dictionary of natrons and the corresponding number of births
     newBorns = set() # Set of each new kitty that was born
@@ -98,7 +98,8 @@ def solveKitty(start, fin):
             # Decode the log to obtain the kittyId passed into the Birth event
             tx = log['transactionHash']
             """
-            TOO SLOW
+            TOO SLOW and goes past Infura's usage limit
+            ------------------------------------------------
             receipt = web3.eth.getTransactionReceipt(tx)
             logs = contract.events.Birth().processReceipt(receipt)
             """
@@ -112,9 +113,14 @@ def solveKitty(start, fin):
             if newBornId in newBorns:
                 continue
 
+
+            totalBirths += 1
+
             newBorns.add(newBornId)
             matronId = logs['args']['matronId']
-            totalBirths += 1
+            if matronId != 0:
+                naturalBirths += 1
+
             # print('Processing kittyId ', kittyId)
             # Store kittyID into dictionary
             if matronId in matrons:
@@ -133,8 +139,8 @@ def solveKitty(start, fin):
         end = min(fin, start + INTERVAL)
 
     # print(matrons)
-    # print(newBorns)
-    return (totalBirths, mostBirths, kittyWithMostBirths)
+    # print('\n', newBorns)
+    return (totalBirths, naturalBirths, mostBirths, kittyWithMostBirths)
 
 """
 Calls contract method getKitty to get kitty's data
@@ -161,9 +167,10 @@ def getKittyData(kittyId):
 
 if __name__ == '__main__':
     # startingBlock=6607985 and endingBlock=7028323
-    totalBirths, mostBirths, kittyWithMostBirths = solveKitty(6607985, 6608185)
+    totalBirths, naturalBirths, mostBirths, kittyWithMostBirths = solveKitty(6607985, 7028323)
     print('FINAL ANSWER -------------------------')
     print('total births: ', totalBirths)
+    print('natural births ', naturalBirths)
     print('most births: ', mostBirths)
     print('kitty with most births: ', kittyWithMostBirths)
     birthTime, generation, genes = getKittyData(kittyWithMostBirths)
